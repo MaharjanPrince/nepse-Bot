@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Database connection and operations
 def get_connection():
     return psycopg2.connect(
         host = os.environ.get('DB_HOST'),
@@ -12,6 +13,7 @@ def get_connection():
         password = os.environ.get('DB_PASS')
     )
 
+#Function to insert a new symbol into the symbols table with its company name. If the symbol already exists, it does nothing.
 def insert_symbol(symbol, company_name):
     conn = get_connection()
     cursor = conn.cursor()
@@ -23,6 +25,7 @@ def insert_symbol(symbol, company_name):
     cursor.close()
     conn.close()
 
+#Function to insert a new price record into the stockprices table. If a record for the same symbol and date already exists, it does nothing.
 def insert_price(symbol_id, date, open_price, high, low, close, volume):
     conn = get_connection()
     cursor = conn.cursor()
@@ -36,6 +39,7 @@ def insert_price(symbol_id, date, open_price, high, low, close, volume):
     cursor.close()
     conn.close()
 
+#Function to get the ID of a symbol from the symbols table. Returns None if the symbol does not exist.
 def get_symbol_id(symbol):
     conn = get_connection()
     cursor = conn.cursor()

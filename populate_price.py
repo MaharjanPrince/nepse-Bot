@@ -17,6 +17,7 @@ def get_symbols_from_db():
     conn.close()
     return [row[0] for row in rows]
 
+#Fetches stock data for a given symbol from the Merolagani API. It retrieves data from January 1, 2010, until the current date. The function constructs the appropriate URL with query parameters and sends a GET request to the API. It returns the JSON response containing the stock data.
 def fetch_stock_data(symbol):
     # Fetch from January 1, 2010 until now
     start = int(datetime.datetime(2010, 1, 1).timestamp())
