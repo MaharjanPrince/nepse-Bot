@@ -1,7 +1,7 @@
 import datetime
 import time
 import requests
-from db import get_connection, get_symbol_id, insert_price
+from database.db import get_connection, get_symbol_id, insert_price
 
 def get_recent_timestamps():
     today = datetime.datetime.now()

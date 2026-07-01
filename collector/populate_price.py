@@ -1,7 +1,7 @@
 import requests
 import datetime
 import time
-from db import get_connection, get_symbol_id, insert_price
+from ..database import get_connection, get_symbol_id, insert_price
 
 #Gets the symbols from the database that have at least one price record in the stockprices table. This ensures that we only fetch data for symbols that are already being tracked.
 def get_symbols_from_db():

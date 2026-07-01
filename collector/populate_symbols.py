@@ -1,5 +1,5 @@
 import requests 
-from db import insert_symbol
+from database import insert_symbol
 
 def get_all_symbol():
     url = "https://merolagani.com/handlers/AutoSuggestHandler.ashx?type=Company"
