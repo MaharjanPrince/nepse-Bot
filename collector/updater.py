@@ -1,77 +1,162 @@
 import datetime
 import time
 import requests
-from database.db import get_connection, get_symbol_id, insert_price
+
+from database.db import (
+    get_connection,
+    get_symbol_id,
+    insert_price,
+)
+
 
 def get_recent_timestamps():
     today = datetime.datetime.now()
     three_days_ago = today - datetime.timedelta(days=3)
-    
-    end_timestamp = int(today.timestamp())
-    start_timestamp = int(three_days_ago.timestamp())
-    
-    return start_timestamp, end_timestamp
+
+    return int(three_days_ago.timestamp()), int(today.timestamp())
 
 
 def fetch_recent_data(symbol, start_timestamp, end_timestamp):
-    url = f"https://merolagani.com/handlers/TechnicalChartHandler.ashx?type=get_advanced_chart&symbol={symbol}&resolution=1D&rangeStartDate={start_timestamp}&rangeEndDate={end_timestamp}&from=&isAdjust=1&currencyCode=NPR"
+    url = (
+        "https://merolagani.com/handlers/TechnicalChartHandler.ashx"
+        f"?type=get_advanced_chart"
+        f"&symbol={symbol}"
+        f"&resolution=1D"
+        f"&rangeStartDate={start_timestamp}"
+        f"&rangeEndDate={end_timestamp}"
+        f"&from="
+        f"&isAdjust=1"
+        f"&currencyCode=NPR"
+    )
+
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0",
         "Referer": "https://merolagani.com/",
     }
-    response = requests.get(url, headers=headers)
+
+    response = requests.get(url, headers=headers, timeout=20)
+    response.raise_for_status()
+
     return response.json()
 
 
 def get_symbols_from_db():
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT DISTINCT s.symbol 
-        FROM symbols s
-        INNER JOIN stockprices p ON p.symbol_id = s.id
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT symbol
+        FROM symbols
+        ORDER BY symbol;
     """)
-    rows = cursor.fetchall()
-    cursor.close()
+
+    symbols = [row[0] for row in cur.fetchall()]
+
+    cur.close()
     conn.close()
-    return [row[0] for row in rows]
+
+    return symbols
+
 
 def main():
-    start, end = get_recent_timestamps()
+
+    run_start = datetime.datetime.now()
+
+    print("=" * 70)
+    print(f"Run started : {run_start}")
+    print("=" * 70)
+
+    start_ts, end_ts = get_recent_timestamps()
+
     symbols = get_symbols_from_db()
-    print(f"Updating {len(symbols)} symbols...")
 
-    updated_count = 0
+    print(f"Checking {len(symbols)} symbols...")
+    print()
+
+    processed = 0
+    api_success = 0
+    inserted_rows = 0
+    failed = []
+
     for symbol in symbols:
-        try:
-            data = fetch_recent_data(symbol, start, end)
 
-            if data.get('s') != 'ok' or 't' not in data:
+        processed += 1
+
+        try:
+
+            data = fetch_recent_data(symbol, start_ts, end_ts)
+
+            if data.get("s") != "ok":
+                print(f"[SKIP] {symbol:<10} Invalid response")
+                continue
+
+            if "t" not in data:
+                print(f"[SKIP] {symbol:<10} No recent data")
                 continue
 
             symbol_id = get_symbol_id(symbol)
+
             if symbol_id is None:
+                print(f"[SKIP] {symbol:<10} Missing symbol_id")
                 continue
 
-            for i in range(len(data['t'])):
-                date = datetime.datetime.fromtimestamp(data['t'][i]).date()
-                insert_price(
+            api_success += 1
+
+            rows_for_symbol = 0
+
+            for i in range(len(data["t"])):
+
+                date = datetime.datetime.fromtimestamp(
+                    data["t"][i]
+                ).date()
+
+                inserted = insert_price(
                     symbol_id,
                     date,
-                    data['o'][i],
-                    data['h'][i],
-                    data['l'][i],
-                    data['c'][i],
-                    data['v'][i]
+                    data["o"][i],
+                    data["h"][i],
+                    data["l"][i],
+                    data["c"][i],
+                    data["v"][i],
                 )
-            updated_count += 1
+
+                if inserted:
+                    inserted_rows += 1
+                    rows_for_symbol += 1
+
+            print(
+                f"[OK]   {symbol:<10} "
+                f"Inserted {rows_for_symbol} new rows"
+            )
 
         except Exception as e:
-            print(f"{symbol}: Error - {e}")
 
-        time.sleep(0.3)
+            failed.append(symbol)
+            print(f"[ERROR] {symbol:<10} {e}")
 
-    print(f"Done. Updated {updated_count} symbols.")
+        time.sleep(0.30)
+
+    run_end = datetime.datetime.now()
+
+    print()
+    print("=" * 70)
+    print("SUMMARY")
+    print("=" * 70)
+    print(f"Started           : {run_start}")
+    print(f"Finished          : {run_end}")
+    print(f"Duration          : {run_end-run_start}")
+    print(f"Symbols checked   : {processed}")
+    print(f"API Success       : {api_success}")
+    print(f"New rows inserted : {inserted_rows}")
+    print(f"Failed symbols    : {len(failed)}")
+
+    if failed:
+        print()
+        print("Failed:")
+        print(", ".join(failed))
+
+    print("=" * 70)
+
 
 if __name__ == "__main__":
     main()
