@@ -80,21 +80,41 @@ def get_52_week_data():
 def new_52_week_highs():
     df = get_52_week_data()
     
-    # highest close per symbol over 365 days
-    yearly_high = df.groupby('symbol')['close'].max().reset_index()
+    today = df['date'].max()
+    
+    # Get yearly high EXCLUDING today
+    historical = df[df['date'] < today]
+    yearly_high = historical.groupby('symbol')['close'].max().reset_index()
     yearly_high.columns = ['symbol', 'yearly_high']
     
-    # today's close
-    today = df['date'].max()
     today_df = df[df['date'] == today][['symbol', 'close']].rename(columns={'close': 'today_close'})
     
     merged = pd.merge(today_df, yearly_high, on='symbol')
     
-    # stocks where today's close >= yearly high
+    # today broke or matched the previous high
     highs = merged[merged['today_close'] >= merged['yearly_high']]
     
     return highs[['symbol', 'today_close', 'yearly_high']]
 
+
+def new_52_week_lows():
+    df = get_52_week_data()
+    
+    today = df['date'].max()
+    
+    # Get yearly low EXCLUDING today
+    historical = df[df['date'] < today]
+    yearly_low = historical.groupby('symbol')['close'].min().reset_index()
+    yearly_low.columns = ['symbol', 'yearly_low']
+    
+    today_df = df[df['date'] == today][['symbol', 'close']].rename(columns={'close': 'today_close'})
+    
+    merged = pd.merge(today_df, yearly_low, on='symbol')
+    
+    # today broke or matched the previous low
+    lows = merged[merged['today_close'] <= merged['yearly_low']]
+    
+    return lows[['symbol', 'today_close', 'yearly_low']]
 if __name__ == "__main__":
     # df = get_latest_two_days()
     # print(df)
@@ -115,3 +135,7 @@ if __name__ == "__main__":
 
     print ("=== NEW 52 WEEK HIGHS ===")
     print(new_52_week_highs())
+
+    print ("=== NEW 52 WEEK LOWS ===")
+    print(new_52_week_lows())
+    

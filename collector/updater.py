@@ -1,16 +1,16 @@
 import datetime
 import time
 import requests
+import sys
+import os
+import pytz
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from database.db import get_connection, get_symbol_id, insert_price
 
-from database.db import (
-    get_connection,
-    get_symbol_id,
-    insert_price,
-)
-
+nepal_tz = pytz.timezone("Asia/Kathmandu")
 
 def get_recent_timestamps():
-    today = datetime.datetime.now()
+    today = datetime.datetime.now(nepal_tz)
     three_days_ago = today - datetime.timedelta(days=3)
 
     return int(three_days_ago.timestamp()), int(today.timestamp())
@@ -45,9 +45,10 @@ def get_symbols_from_db():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT symbol
-        FROM symbols
-        ORDER BY symbol;
+        SELECT DISTINCT s.symbol 
+        FROM symbols s
+        INNER JOIN stockprices p ON p.symbol_id = s.id
+        ORDER BY s.symbol;
     """)
 
     symbols = [row[0] for row in cur.fetchall()]
@@ -60,7 +61,7 @@ def get_symbols_from_db():
 
 def main():
 
-    run_start = datetime.datetime.now()
+    run_start = datetime.datetime.now(nepal_tz)
 
     print("=" * 70)
     print(f"Run started : {run_start}")
@@ -79,64 +80,34 @@ def main():
     failed = []
 
     for symbol in symbols:
-
         processed += 1
-
         try:
-
             data = fetch_recent_data(symbol, start_ts, end_ts)
-
-            if data.get("s") != "ok":
-                print(f"[SKIP] {symbol:<10} Invalid response")
-                continue
-
-            if "t" not in data:
-                print(f"[SKIP] {symbol:<10} No recent data")
+            if data.get("s") != "ok" or "t" not in data:
                 continue
 
             symbol_id = get_symbol_id(symbol)
-
             if symbol_id is None:
-                print(f"[SKIP] {symbol:<10} Missing symbol_id")
                 continue
 
             api_success += 1
-
-            rows_for_symbol = 0
-
             for i in range(len(data["t"])):
-
-                date = datetime.datetime.fromtimestamp(
-                    data["t"][i]
-                ).date()
-
+                date = datetime.datetime.fromtimestamp(data["t"][i], tz=nepal_tz).date()
                 inserted = insert_price(
-                    symbol_id,
-                    date,
-                    data["o"][i],
-                    data["h"][i],
-                    data["l"][i],
-                    data["c"][i],
-                    data["v"][i],
+                    symbol_id, date,
+                    data["o"][i], data["h"][i], data["l"][i],
+                    data["c"][i], data["v"][i]
                 )
-
                 if inserted:
                     inserted_rows += 1
-                    rows_for_symbol += 1
-
-            print(
-                f"[OK]   {symbol:<10} "
-                f"Inserted {rows_for_symbol} new rows"
-            )
 
         except Exception as e:
-
             failed.append(symbol)
             print(f"[ERROR] {symbol:<10} {e}")
 
-        time.sleep(0.30)
+        time.sleep(0.30)   
 
-    run_end = datetime.datetime.now()
+    run_end = datetime.datetime.now(nepal_tz)
 
     print()
     print("=" * 70)
