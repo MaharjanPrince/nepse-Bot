@@ -24,6 +24,7 @@ def get_latest_two_days():
     return pd.read_sql(query, engine)
 
 def get_price_changes():
+    
     df = get_latest_two_days()
     
     dates = sorted(df['date'].unique())
@@ -39,6 +40,7 @@ def get_price_changes():
     merged = pd.merge(today_df, yesterday_df, on='symbol')
     merged['change%'] = ((merged['today_close'] - merged['yesterday_close']) / merged['yesterday_close']) * 100
     merged['change%'] = merged['change%'].round(2)
+    merged = merged[merged['change%'] != 0]  # ← after calculation
     
     return merged
 
@@ -67,14 +69,22 @@ def highest_Turnover(n=10):
 
 def get_52_week_data():
     engine = get_engine()
+
     query = """
-        SELECT s.symbol, p.date, p.close
+        SELECT
+            s.symbol,
+            p.date,
+            p.high,
+            p.low,
+            p.close
         FROM stockprices p
-        JOIN symbols s ON s.id = p.symbol_id
+        JOIN symbols s
+            ON s.id = p.symbol_id
         WHERE p.date >= CURRENT_DATE - INTERVAL '365 days'
-        AND s.symbol != 'NEPSE'
+          AND s.symbol != 'NEPSE'
         ORDER BY s.symbol, p.date;
     """
+
     return pd.read_sql(query, engine)
 
 def new_52_week_highs():
@@ -84,7 +94,7 @@ def new_52_week_highs():
     
     # Get yearly high EXCLUDING today
     historical = df[df['date'] < today]
-    yearly_high = historical.groupby('symbol')['close'].max().reset_index()
+    yearly_high = historical.groupby('symbol')['high'].max().reset_index()
     yearly_high.columns = ['symbol', 'yearly_high']
     
     today_df = df[df['date'] == today][['symbol', 'close']].rename(columns={'close': 'today_close'})
@@ -104,7 +114,7 @@ def new_52_week_lows():
     
     # Get yearly low EXCLUDING today
     historical = df[df['date'] < today]
-    yearly_low = historical.groupby('symbol')['close'].min().reset_index()
+    yearly_low = historical.groupby('symbol')['low'].min().reset_index()
     yearly_low.columns = ['symbol', 'yearly_low']
     
     today_df = df[df['date'] == today][['symbol', 'close']].rename(columns={'close': 'today_close'})

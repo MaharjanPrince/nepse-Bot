@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEPSE Screener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shadow-sm">
+        <div>
+            <span class="text-blue-700 font-bold text-xl">NEPSE</span>
+            <span class="text-gray-600 text-xl font-medium"> Screener</span>
+        </div>
+        <span class="text-sm font-medium text-gray-500">{{ date }}</span>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-8 py-8">
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Top Gainers</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">Prev Close</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">Change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in gainers %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right text-gray-600">{{ row.yesterday_close }}</td>
+                                <td class="text-right font-semibold">{{ row.today_close }}</td>
+                                <td class="text-right font-bold text-green-600">+{{ row['change%'] }}%</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not gainers %}
+                            <tr><td colspan="4" class="py-8 text-center text-gray-500 text-sm font-medium">Market closed</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Top Losers</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">Prev Close</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">Change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in losers %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right text-gray-600">{{ row.yesterday_close }}</td>
+                                <td class="text-right font-semibold">{{ row.today_close }}</td>
+                                <td class="text-right font-bold text-red-600">{{ row['change%'] }}%</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not losers %}
+                            <tr><td colspan="4" class="py-8 text-center text-gray-500 text-sm font-medium">Market closed</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Highest Volume</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in volume %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right text-gray-600">{{ row.close }}</td>
+                                <td class="text-right font-semibold">{{ "{:,}".format(row.volume) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">Highest Turnover</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">Turnover</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in turnover %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right text-gray-600">{{ row.close }}</td>
+                                <td class="text-right font-semibold">Rs {{ "{:,.0f}".format(row.turnover) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">52-Week Highs</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">52W High</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in new_highs %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right font-semibold">{{ row.today_close }}</td>
+                                <td class="text-right text-green-600 font-bold">{{ row.yearly_high }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not new_highs %}
+                            <tr><td colspan="3" class="py-8 text-center text-gray-500 text-sm font-medium">No new highs today</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wider mb-4">52-Week Lows</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-gray-200 text-xs text-gray-600 uppercase font-semibold">
+                                <th class="text-left pb-2">Symbol</th>
+                                <th class="text-right pb-2">LTP</th>
+                                <th class="text-right pb-2">52W Low</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in new_lows %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="text-right font-semibold">{{ row.today_close }}</td>
+                                <td class="text-right text-red-600 font-bold">{{ row.yearly_low }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% if not new_lows %}
+                            <tr><td colspan="3" class="py-8 text-center text-gray-500 text-sm font-medium">No new lows today</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
