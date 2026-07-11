@@ -15,12 +15,13 @@ def get_latest_two_days():
         SELECT s.symbol, p.date, p.close, p.volume
         FROM stockprices p
         JOIN symbols s ON s.id = p.symbol_id
-        WHERE p.date >= (
-            SELECT MAX(date) - INTERVAL '5 day'
-            FROM stockprices
+        WHERE p.date IN (
+            SELECT DISTINCT date FROM stockprices 
+            ORDER BY date DESC LIMIT 2
         )
-        ORDER BY s.symbol, p.date;
-        """
+        AND s.symbol != 'NEPSE'
+        ORDER BY s.symbol, p.date
+    """
     return pd.read_sql(query, engine)
 
 def get_price_changes():
@@ -30,13 +31,11 @@ def get_price_changes():
     dates = sorted(df['date'].unique())
     if len(dates) < 2:
         return None
-    
     today = dates[-1]
     yesterday = dates[-2]
     
     today_df = df[df['date'] == today][['symbol', 'close']].rename(columns={'close': 'today_close'})
     yesterday_df = df[df['date'] == yesterday][['symbol', 'close']].rename(columns={'close': 'yesterday_close'})
-    
     merged = pd.merge(today_df, yesterday_df, on='symbol')
     merged['change%'] = ((merged['today_close'] - merged['yesterday_close']) / merged['yesterday_close']) * 100
     merged['change%'] = merged['change%'].round(2)
@@ -148,4 +147,3 @@ if __name__ == "__main__":
 
     print ("=== NEW 52 WEEK LOWS ===")
     print(new_52_week_lows())
-    

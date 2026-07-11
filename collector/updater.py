@@ -4,17 +4,39 @@ import requests
 import sys
 import os
 import pytz
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db import get_connection, get_symbol_id, insert_price
 
-nepal_tz = pytz.timezone("Asia/Kathmandu")
+nepal_tz = pytz.timezone('Asia/Kathmandu')
 
-def get_recent_timestamps():
-    today = datetime.datetime.now(nepal_tz)
-    three_days_ago = today - datetime.timedelta(days=3)
+def get_latest_per_symbol():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT s.symbol, MAX(p.date) as latest_date
+        FROM stockprices p
+        JOIN symbols s ON s.id = p.symbol_id
+        GROUP BY s.symbol;
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return {row[0]: row[1] for row in rows}
 
-    return int(three_days_ago.timestamp()), int(today.timestamp())
-
+def get_symbols_from_db():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT s.symbol
+        FROM symbols s
+        INNER JOIN stockprices p ON p.symbol_id = s.id
+        ORDER BY s.symbol;
+    """)
+    symbols = [row[0] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return symbols
 
 def fetch_recent_data(symbol, start_timestamp, end_timestamp):
     url = (
@@ -28,51 +50,24 @@ def fetch_recent_data(symbol, start_timestamp, end_timestamp):
         f"&isAdjust=1"
         f"&currencyCode=NPR"
     )
-
     headers = {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Referer": "https://merolagani.com/",
     }
-
     response = requests.get(url, headers=headers, timeout=20)
     response.raise_for_status()
-
     return response.json()
 
-
-def get_symbols_from_db():
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT DISTINCT s.symbol 
-        FROM symbols s
-        INNER JOIN stockprices p ON p.symbol_id = s.id
-        ORDER BY s.symbol;
-    """)
-
-    symbols = [row[0] for row in cur.fetchall()]
-
-    cur.close()
-    conn.close()
-
-    return symbols
-
-
 def main():
-
     run_start = datetime.datetime.now(nepal_tz)
-
     print("=" * 70)
-    print(f"Run started : {run_start}")
+    print(f"Run Started: {run_start}")
     print("=" * 70)
 
-    start_ts, end_ts = get_recent_timestamps()
-
+    end_ts = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
+    latest_dates = get_latest_per_symbol()
     symbols = get_symbols_from_db()
-
-    print(f"Checking {len(symbols)} symbols...")
-    print()
+    print(f"Checking {len(symbols)} symbols for updates...")
 
     processed = 0
     api_success = 0
@@ -82,7 +77,17 @@ def main():
     for symbol in symbols:
         processed += 1
         try:
+            latest = latest_dates.get(symbol)
+            if latest:
+                start_ts = int(datetime.datetime.combine(
+                    latest - datetime.timedelta(days=1),
+                    datetime.time.min
+                ).replace(tzinfo=datetime.timezone.utc).timestamp())
+            else:
+                start_ts = int((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=3)).timestamp())
+
             data = fetch_recent_data(symbol, start_ts, end_ts)
+
             if data.get("s") != "ok" or "t" not in data:
                 continue
 
@@ -92,42 +97,40 @@ def main():
 
             api_success += 1
             for i in range(len(data["t"])):
-                date = datetime.datetime.fromtimestamp(data["t"][i], tz=nepal_tz).date()
+                date = datetime.datetime.fromtimestamp(data["t"][i], datetime.timezone.utc).date()
                 inserted = insert_price(
-                    symbol_id, date,
-                    data["o"][i], data["h"][i], data["l"][i],
-                    data["c"][i], data["v"][i]
+                    symbol_id,
+                    date,
+                    data["o"][i],
+                    data["h"][i],
+                    data["l"][i],
+                    data["c"][i],
+                    data["v"][i]
                 )
                 if inserted:
                     inserted_rows += 1
 
         except Exception as e:
             failed.append(symbol)
-            print(f"[ERROR] {symbol:<10} {e}")
+            print(f"[ERROR] {symbol:<10}: {e}")
 
-        time.sleep(0.30)   
+        time.sleep(0.5)
 
     run_end = datetime.datetime.now(nepal_tz)
-
     print()
     print("=" * 70)
     print("SUMMARY")
     print("=" * 70)
-    print(f"Started           : {run_start}")
-    print(f"Finished          : {run_end}")
-    print(f"Duration          : {run_end-run_start}")
-    print(f"Symbols checked   : {processed}")
-    print(f"API Success       : {api_success}")
-    print(f"New rows inserted : {inserted_rows}")
-    print(f"Failed symbols    : {len(failed)}")
-
+    print(f"Started  : {run_start}")
+    print(f"Finished : {run_end}")
+    print(f"Duration : {run_end - run_start}")
+    print(f"Checked  : {processed}")
+    print(f"Success  : {api_success}")
+    print(f"Inserted : {inserted_rows}")
+    print(f"Failed   : {len(failed)}")
     if failed:
-        print()
-        print("Failed:")
-        print(", ".join(failed))
-
+        print("Failed symbols:", ", ".join(failed))
     print("=" * 70)
-
 
 if __name__ == "__main__":
     main()

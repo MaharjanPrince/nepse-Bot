@@ -4,3 +4,5 @@ venv
 __pycache__
 Logs
 __init__.py
+.vscode
+run_updater.sh
