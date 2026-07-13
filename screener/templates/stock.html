@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ symbol }} — NEPSE Screener</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-gray-800">
+
+    
+    <div class="border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+        <div>
+            <a href="/" class="text-gray-400 text-sm hover:text-gray-600">← Back</a>
+            <span class="ml-4 text-blue-700 font-bold text-xl">{{ symbol }}</span>
+        </div>
+    </div>
+    {% if stats %}
+    <div class="max-w-7xl mx-auto px-8 pt-6">
+        
+        <!-- Price Header -->
+        <div class="mb-6">
+            <span class="text-4xl font-bold">Rs {{ stats.current_price }}</span>
+            <span class="ml-3 text-sm text-gray-400">Last Traded Price</span>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">52W High</p>
+                <p class="text-lg font-semibold text-green-600">Rs {{ stats.week52_high }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">52W Low</p>
+                <p class="text-lg font-semibold text-red-500">Rs {{ stats.week52_low }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">Avg Volume</p>
+                <p class="text-lg font-semibold">{{ "{:,}".format(stats.avg_volume) }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">Today Volume</p>
+                <p class="text-lg font-semibold">{{ "{:,}".format(stats.today_volume) }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">SMA 20</p>
+                <p class="text-lg font-semibold">Rs {{ stats.sma20 }}</p>
+                {% if stats.above_sma20 %}
+                <p class="text-xs text-green-600 mt-1">↑ Price above SMA20</p>
+                {% else %}
+                <p class="text-xs text-red-500 mt-1">↓ Price below SMA20</p>
+                {% endif %}
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">SMA 50</p>
+                <p class="text-lg font-semibold">Rs {{ stats.sma50 }}</p>
+                {% if stats.above_sma50 %}
+                <p class="text-xs text-green-600 mt-1">↑ Price above SMA50</p>
+                {% else %}
+                <p class="text-xs text-red-500 mt-1">↓ Price below SMA50</p>
+                {% endif %}
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-400 uppercase tracking-wider">RSI (14)</p>
+                <p class="text-lg font-semibold">{{ stats.rsi }}</p>
+                {% if stats.rsi_color == 'red' %}
+                <p class="text-xs text-red-500 mt-1">{{ stats.rsi_signal }}</p>
+                {% elif stats.rsi_color == 'green' %}
+                <p class="text-xs text-green-600 mt-1">{{ stats.rsi_signal }}</p>
+                {% else %}
+                <p class="text-xs text-gray-400 mt-1">{{ stats.rsi_signal }}</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+    <div class="max-w-7xl mx-auto px-8 py-8">
+        {{ chart | safe }}
+    </div>
+
+</body>
+</html>

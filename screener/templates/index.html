@@ -38,7 +38,7 @@
                         <tbody>
                             {% for row in gainers %}
                             <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                <td class="py-1.5 font-bold text-blue-700">{{ row.symbol }}</td>
+                                <td class="py-2 font-semibold text-blue-700"><a href="/stock/{{ row.symbol }}" class="hover:underline">{{ row.symbol }}</a></td>
                                 <td class="text-right text-gray-600">{{ row.yesterday_close }}</td>
                                 <td class="text-right font-semibold">{{ row.today_close }}</td>
                                 <td class="text-right font-bold text-green-600">+{{ row['change%'] }}%</td>

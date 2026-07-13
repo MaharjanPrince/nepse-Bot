@@ -1,6 +1,7 @@
 from flask import Flask, render_template
-from engine import top_gainers, top_losers, highest_volume, highest_Turnover, new_52_week_highs, new_52_week_lows
+from engine import get_stock_stats, top_gainers, top_losers, highest_volume, highest_Turnover, new_52_week_highs, new_52_week_lows
 import datetime
+from engine import top_gainers, top_losers, highest_volume, highest_Turnover, new_52_week_highs, new_52_week_lows, get_stock_chart
 
 app = Flask(__name__)
 
@@ -16,6 +17,13 @@ def index():
         'date': datetime.datetime.now().strftime("%B %d, %Y")
     }
     return render_template('index.html', **data)
+
+@app.route('/stock/<symbol>')
+def stock(symbol):
+    symbol = symbol.upper()
+    chart_html = get_stock_chart(symbol)
+    stats = get_stock_stats(symbol)
+    return render_template('stock.html', symbol=symbol, chart=chart_html, stats=stats)
 
 if __name__ == '__main__':
     app.run(debug=True)
